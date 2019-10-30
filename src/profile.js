@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
-import { Route, BrowserRouter as Router, Switch } from 'react-router-dom'
+import { Route, Link, BrowserRouter as Router, Switch } from 'react-router-dom'
 import axios from 'axios';
+//import SpotifyPlayer from 'react-spotify-web-playback';
 import './App.css';
 import ReactPlayer from 'react-player'
+
 
 let defaultStyle = {
   color: '#000'
@@ -67,8 +69,7 @@ class Playlist extends Component {
     );
   }
 }
-
-class App extends Component {
+class Profile extends Component {
   constructor() {
     super();
     this.state = {
@@ -131,10 +132,11 @@ class App extends Component {
     }
     
   }
-  playThis = (event,song) => {
+  playdis = function(event,song) {
     let track = song
+    console.log(song)
     if (song.preview_url) {
-      this.setState({previewPlay: song.preview_url, /*playing:true,*/ currentPlay: {artist :song.artists[0].name, song: song.name}})
+      this.setState({previewPlay: song.preview_url, playing:true, currentPlay: {artist :song.artists[0].name, song: song.name}})
     } else {
       console.log("no preview found")
       // later add modal window for client information that track has no preview data. maybe sdk lookup
@@ -144,18 +146,16 @@ class App extends Component {
     }
     console.log(this.state.currentPlay.artist)
   }
+  playThis = this.playdis.bind(this)
+  hpy(){console.log("no callback inserted")}
+  handlePlay = this.hpy.bind(this)
+  hps(){this.setState({playing:false})}
+  handlePause = this.hps.bind(this)
+  hpe(){this.setState({playing:false})}
+  handleEnded = this.hpe.bind(this)    
   ref = player => {
     this.player = player
-  }
-
-  handlePlayPause = () => {
-    this.setState({playing:!this.state.playing})
-  }
-  // hpp(){
-  //   this.setState({playing:!this.state.playing})
-  // } 
-  // handlePlayPause = this.hpp.bind(this)
-  
+  } 
   render() {
     let playlistToRender = 
     this.state.user &&
@@ -170,9 +170,11 @@ class App extends Component {
         {this.state.user.name && <div>
           { this.state.previewPlay && this.state.token ?
             <ReactPlayer ref={this.ref} className='react-player' width='300px' height='50px' 
-              url={this.state.previewPlay} controls={false} playing={this.state.playing}
+              url={this.state.previewPlay} controls={true} playing={true}
               onReady={() => console.log('onReady')}
               onStart={() => console.log('onStart')}
+              onPlay={this.handlePlay} onPause={this.handlePause}
+              onEnded={this.handleEnded}
             />
           : null }
       
@@ -180,21 +182,21 @@ class App extends Component {
           <h1> {this.state.user && this.state.user.name}'Playlist
           </h1>
           {this.state.currentPlay ? <h2>
-            {this.state.currentPlay.artist} {this.state.previewPlay && ("-")} {this.state.currentPlay.song}  </h2>
-          : null }<button onClick={this.handlePlayPause}>{this.state.playing ? 'Pause' : 'Play'}</button>
+            {this.state.currentPlay.artist} {this.state.previewPlay && ("-")} {this.state.currentPlay.song} playing now</h2>
+          : null }
           <PlaylistCounter  playlists={playlistToRender}/>
           <HoursCounter playlists={playlistToRender}/>
           <Filter onStringChange={text=>this.setState({filterString:text})} />
-          
+          <div>test2</div>
           
           {playlistToRender.map((playlist,index)=>
               <Playlist key={index} playThis={this.playThis} playlist={playlist}/>
           )}
-        </div>
+        </div>}
         }
       </div>
     )
   };
 }
 
-export default App;
+export default Profile;
