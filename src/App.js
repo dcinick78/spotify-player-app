@@ -3,6 +3,7 @@ import { Route, BrowserRouter as Router, Switch } from 'react-router-dom'
 import axios from 'axios';
 import './App.css';
 import ReactPlayer from 'react-player'
+import restService from './services.js'
 
 let defaultStyle = {
   color: '#000'
@@ -59,8 +60,8 @@ class Playlist extends Component {
       <h3>{playlist.name}</h3>
       <img src={playlist.imageUrl} />
         <ul>
-          {playlist.songs.map(song => 
-            <li onClick={(event) => this.props.playThis(event, song)} > {song.name}</li>
+          {playlist.songs.map((song,index) => 
+            <li key={index} onClick={(event) => this.props.playThis(event, song)} > {song.name}</li>
           )}
         </ul>
       </div>
@@ -73,6 +74,10 @@ class App extends Component {
     super();
     this.state = {
       user:{},
+      navigation: {
+        prevNodes:[],
+        view:'playlists'
+      },
       playlists:[],
       filterString:'',
       currentPlay:{},
@@ -83,10 +88,14 @@ class App extends Component {
     };
   }
   componentDidMount() {    
+    
     let _token = new URLSearchParams(window.location.search).get('access_token')
+    
     let uri_config = {user:'https://api.spotify.com/v1/me',playlists:'https://api.spotify.com/v1/me/playlists'}
     let headers = {headers: {'Authorization': 'Bearer '+_token}}
     this.setState({token:_token})
+
+    console.log(restService())
 
     if (_token) {
       // get user name data
@@ -133,30 +142,27 @@ class App extends Component {
   }
   playThis = (event,song) => {
     let track = song
-    if (song.preview_url) {
-      this.setState({previewPlay: song.preview_url, /*playing:true,*/ currentPlay: {artist :song.artists[0].name, song: song.name}})
+    if (track.preview_url) {
+      this.setState({previewPlay: track.preview_url, /*playing:true,*/ currentPlay: {artist :track.artists[0].name, song: track.name}})
     } else {
       console.log("no preview found")
       // later add modal window for client information that track has no preview data. maybe sdk lookup
-      // add loading of audio data here ~ sdk playback put to connect to spotify app
-      // and use the state as string for the uri || api endpoint
-      this.setState({currentPlay: {artist :song.artists[0].name, song: song.name}})
+      this.setState({currentPlay: {artist :track.artists[0].name, song: track.name}})
     }
-    console.log(this.state.currentPlay.artist)
+    console.log("this artist",this.state.currentPlay.artist)
   }
   ref = player => {
     this.player = player
   }
-
   handlePlayPause = () => {
     this.setState({playing:!this.state.playing})
   }
-  // hpp(){
-  //   this.setState({playing:!this.state.playing})
-  // } 
-  // handlePlayPause = this.hpp.bind(this)
-  
+  handleNavigation = (newNav) => {
+    const prev = this.state.navigation.view
+    this.setState({navigation:{prevNode:prev,view:newNav}})
+  }  
   render() {
+
     let playlistToRender = 
     this.state.user &&
     this.state.playlists 
@@ -165,8 +171,16 @@ class App extends Component {
         playlist.name.toLowerCase().includes(
           this.state.filterString.toLowerCase())
     ) : [];
+
     return (
       <div className="App">
+      <div className="navigation">
+      <ul><li onClick={()=>this.handleNavigation('playlists')}>my playlists</li>
+          <li onClick={()=>this.handleNavigation('search')}>search</li>
+          <li onClick={()=>this.props.history.push('/')}>logout</li>
+      </ul>
+      </div>
+
         {this.state.user.name && <div>
           { this.state.previewPlay && this.state.token ?
             <ReactPlayer ref={this.ref} className='react-player' width='300px' height='50px' 
@@ -175,21 +189,27 @@ class App extends Component {
               onStart={() => console.log('onStart')}
             />
           : null }
-      
-          
-          <h1> {this.state.user && this.state.user.name}'Playlist
-          </h1>
-          {this.state.currentPlay ? <h2>
-            {this.state.currentPlay.artist} {this.state.previewPlay && ("-")} {this.state.currentPlay.song}  </h2>
-          : null }<button onClick={this.handlePlayPause}>{this.state.playing ? 'Pause' : 'Play'}</button>
-          <PlaylistCounter  playlists={playlistToRender}/>
-          <HoursCounter playlists={playlistToRender}/>
-          <Filter onStringChange={text=>this.setState({filterString:text})} />
-          
-          
-          {playlistToRender.map((playlist,index)=>
+
+          <h1> {this.state.user && this.state.user.name}'Playlist </h1>
+
+          {this.state.currentPlay ? <h2> {this.state.currentPlay.artist} {this.state.previewPlay && ("-")} {this.state.currentPlay.song} </h2> : null }
+          <button onClick={this.handlePlayPause}>{this.state.playing ? 'Pause' : 'Play'}</button>
+
+          { this.state.navigation.view === 'playlists' && 
+            <div>
+            <PlaylistCounter  playlists={playlistToRender}/>
+            <HoursCounter playlists={playlistToRender}/>
+            <Filter onStringChange={text=>this.setState({filterString:text})} /></div>}
+
+          { this.state.navigation.view === 'playlists' &&
+            playlistToRender.map((playlist,index)=>
               <Playlist key={index} playThis={this.playThis} playlist={playlist}/>
-          )}
+            )
+          }
+          { this.state.navigation.view === 'search' && <div>THIS IS SEARCH</div>}
+
+          
+
         </div>
         }
       </div>
