@@ -155,22 +155,24 @@ class App extends Component {
     this.player = player
   }
   handlePlayPause = () => {
-    this.setState({playing:!this.state.playing})
+    this.setState(prevState => ({playing:!prevState.playing}))
   }
   handleNavigation = (newNav) => {
-    const prev = this.state.navigation.view
-    this.setState({navigation:{prevNode:prev,view:newNav}})
+    let y = this.state.navigation.view
+    ,   x = this.state.navigation.prevNodes
+    x.push(y)
+    this.setState(prevState=>({navigation:{prevNodes:x,view:newNav}}))
   }  
   render() {
 
     let playlistToRender = 
-    this.state.user &&
-    this.state.playlists 
-    ? this.state.playlists
-    .filter(playlist =>
-        playlist.name.toLowerCase().includes(
-          this.state.filterString.toLowerCase())
-    ) : [];
+      this.state.user &&
+      this.state.playlists 
+      ? this.state.playlists
+      .filter(playlist =>
+          playlist.name.toLowerCase().includes(
+            this.state.filterString.toLowerCase())
+      ) : [];
 
     return (
       <div className="App">
