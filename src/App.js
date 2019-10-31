@@ -55,6 +55,19 @@ class Filter extends Component {
 class Playlist extends Component {
   render() {
     let playlist = this.props.playlist
+    console.log(playlist)
+    return (
+      <div style={{...defaultStyle, display: 'inline-block', width: "25%"}}>
+      <h3>{playlist.name}</h3>
+      <img onClick={()=>{this.props.handleNavigation('playlist',{name:playlist.name,uri:playlist.uri,songs:playlist.songs,imageUrl:playlist.imageUrl})}} src={playlist.imageUrl} />
+      </div>
+    );
+  }
+}
+class SinglePlaylist extends Component {
+  render() {
+    let playlist = this.props.playlist
+    console.log(playlist)
     return (
       <div style={{...defaultStyle, display: 'inline-block', width: "25%"}}>
       <h3>{playlist.name}</h3>
@@ -78,6 +91,7 @@ class App extends Component {
         prevNodes:[],
         view:'playlists'
       },
+      playlist:{name:null,uri:null},
       playlists:[],
       filterString:'',
       currentPlay:{},
@@ -91,13 +105,13 @@ class App extends Component {
     
     let _token = new URLSearchParams(window.location.search).get('access_token')
     
-    let uri_config = {user:'https://api.spotify.com/v1/me',playlists:'https://api.spotify.com/v1/me/playlists'}
+    let uri_config = {
+      user:'https://api.spotify.com/v1/me',
+      playlists:'https://api.spotify.com/v1/me/playlists'}
     let headers = {headers: {'Authorization': 'Bearer '+_token}}
     this.setState({token:_token})
 
-    console.log(restService())
-
-    if (_token) {
+   if (_token) {
       // get user name data
       axios.get(uri_config.user,headers)
       .then((response) => {
@@ -107,28 +121,14 @@ class App extends Component {
       }, (error) => {      console.log("error by fetch user",error);    })
       
       // get playlist and tracks data
-    fetch(uri_config.playlists, headers)
-      .then(response=>response.json())
-      .then(playlistData => { // fetchesOfTracks = array of promises of tracks for each playlist
-        ;let fetchesOfTracks = playlistData.items.map(playlist=> {
-          let responsePromise = fetch(playlist.tracks.href,headers)
-          let dataPromise = responsePromise.then(res=>res.json())
-          return dataPromise // dataPromise.items = track array // dataPromise.href = playlist uri key
-        })
-       
-        let allTrackDataResolved = Promise.all(fetchesOfTracks)
-        let playlistPromise = allTrackDataResolved.then(tracksDatas => { // promise.all returns a promise that resolves when the parameter-promises are all resolved. if one does not it rejects the main promise
-          tracksDatas.forEach((trackData, i)=>{
-            playlistData.items[i].tracksDatas = trackData.items.map(item=>item.track)
-          })
-          return playlistData
-        })
-        console.log("playlistData in pormise chain ",playlistData)
-        return playlistPromise
-      }).then((playlists) => {  //console.log(playlists)
+      let profilePlaylists = restService.f(uri_config.playlists, _token)
+      restService.r(profilePlaylists,'playlists',_token)
+      .then((playlists) => {  
         this.setState({
           playlists: playlists.items.map(item => ({
             name: item.name,
+            uri:item.uri,
+            href:item.href,
             imageUrl:(item.images[0].url && item.images[0].url),
             songs: item.tracksDatas.slice(0,9).map(item=>({
               name:item.name,duration:item.duration_ms,id:item.id,preview_url:item.preview_url,artists: item.artists
@@ -137,7 +137,7 @@ class App extends Component {
         })
       })
 
-    }
+   }
     
   }
   playThis = (event,song) => {
@@ -157,10 +157,16 @@ class App extends Component {
   handlePlayPause = () => {
     this.setState(prevState => ({playing:!prevState.playing}))
   }
-  handleNavigation = (newNav) => {
+  handleNavigation = (newNav,pl) => {
     let y = this.state.navigation.view
     ,   x = this.state.navigation.prevNodes
-    x.push(y)
+    if ( x[-1] !== y ){ x.push(y) }
+    // loading playlist in main view and add data for it
+    if (pl) {
+      this.setState({playlist:{name:pl.name,uri:pl.uri,href:pl.href,songs:pl.songs,imageUrl:pl.imageUrl}})
+
+    }
+    console.log("handle called")
     this.setState(prevState=>({navigation:{prevNodes:x,view:newNav}}))
   }  
   render() {
@@ -173,7 +179,7 @@ class App extends Component {
           playlist.name.toLowerCase().includes(
             this.state.filterString.toLowerCase())
       ) : [];
-
+      const playlistRender = this.state.renderedPlaylist
     return (
       <div className="App">
       <div className="navigation">
@@ -205,8 +211,13 @@ class App extends Component {
 
           { this.state.navigation.view === 'playlists' &&
             playlistToRender.map((playlist,index)=>
-              <Playlist key={index} playThis={this.playThis} playlist={playlist}/>
+              <Playlist key={index} playThis={this.playThis} playlist={playlist} handleNavigation={this.handleNavigation}/>
             )
+          }
+          { this.state.navigation.view === 'playlist' &&
+            <div>
+              <SinglePlaylist playThis={this.playThis} playlist={this.state.playlist} handleNavigation={this.handleNavigation}/>
+            </div>
           }
           { this.state.navigation.view === 'search' && <div>THIS IS SEARCH</div>}
 
