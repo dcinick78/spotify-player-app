@@ -1,5 +1,4 @@
 
-import axios from 'axios';
 let fetchMeService = () => {}
 fetchMeService.f = (fetch_uri, fetch_token) => {
     let headers = {headers: {'Authorization': 'Bearer '+fetch_token}}
@@ -31,6 +30,8 @@ fetchMeService.r = (data,direction,fetch_token) => {
         let x = data.then(r=>r.json())
         console.log("nothing for artist fetch aded yet")
         return x
+    } else if (direction === 'search') {
+        console.lolg("no search response handling addded yet")
     }
 }
 export default fetchMeService
